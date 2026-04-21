@@ -5,8 +5,6 @@ import '../models/note.dart';
 import 'dart:io';
 import 'dart:convert';
 
-/// Simple database service using file-based storage
-/// This avoids native asset hooks that fail with spaces in paths
 class DatabaseService {
   static final List<Note> _notes = [];
   static bool _initialized = false;
@@ -16,7 +14,6 @@ class DatabaseService {
     return File(join(directory.path, 'nove_notes.json'));
   }
 
-  /// Initialize database
   static Future<void> init() async {
     if (_initialized) return;
     try {
@@ -43,27 +40,26 @@ class DatabaseService {
     }
   }
 
-  /// Close database
   static Future<void> close() async {
     _notes.clear();
     _initialized = false;
   }
 
-  /// Get all notes sorted by pinned first, then by updated_at
   static Future<List<Note>> getAllNotes() async {
+    // FIX: Force reload from disk to prevent cache lock
+    _initialized = false;
     await init();
+    
     final sorted = List<Note>.from(_notes);
     sorted.sort((a, b) {
-      if (a.isPinned != b.isPinned) {
-        return b.isPinned ? 1 : -1;
-      }
+      if (a.isPinned != b.isPinned) return b.isPinned ? 1 : -1;
       return b.updatedAt.compareTo(a.updatedAt);
     });
     return sorted;
   }
 
-  /// Get note by id
   static Future<Note?> getNoteById(String id) async {
+    _initialized = false;
     await init();
     try {
       return _notes.firstWhere((note) => note.id == id);
@@ -72,45 +68,41 @@ class DatabaseService {
     }
   }
 
-  /// Get pinned notes
   static Future<List<Note>> getPinnedNotes() async {
+    _initialized = false;
     await init();
     return _notes.where((note) => note.isPinned).toList()
       ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
   }
 
-  /// Get favorite notes
   static Future<List<Note>> getFavoriteNotes() async {
+    _initialized = false;
     await init();
     return _notes.where((note) => note.isFavorite).toList()
       ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
   }
 
-  /// Search notes by title or content
   static Future<List<Note>> searchNotes(String query) async {
+    _initialized = false;
     await init();
     final searchTerm = query.toLowerCase();
-    final filtered = _notes
-        .where(
-          (note) =>
-              note.title.toLowerCase().contains(searchTerm) ||
-              note.content.toLowerCase().contains(searchTerm),
-        )
-        .toList();
+    final filtered = _notes.where((note) =>
+        note.title.toLowerCase().contains(searchTerm) ||
+        note.content.toLowerCase().contains(searchTerm)).toList();
     filtered.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return filtered;
   }
 
-  /// Insert a note
   static Future<int> insertNote(Note note) async {
+    _initialized = false;
     await init();
     _notes.add(note);
     await _save();
     return 1;
   }
 
-  /// Update a note
   static Future<int> updateNote(Note note) async {
+    _initialized = false;
     await init();
     final index = _notes.indexWhere((n) => n.id == note.id);
     if (index != -1) {
@@ -121,8 +113,8 @@ class DatabaseService {
     return 0;
   }
 
-  /// Delete a note
   static Future<int> deleteNote(String id) async {
+    _initialized = false;
     await init();
     final initialLength = _notes.length;
     _notes.removeWhere((note) => note.id == id);
@@ -130,20 +122,18 @@ class DatabaseService {
     return initialLength - _notes.length;
   }
 
-  /// Get notes count
   static Future<int> getNotesCount() async {
+    _initialized = false;
     await init();
     return _notes.length;
   }
 
-  /// Get notes by category
   static Future<List<Note>> getNotesByCategory(String category) async {
+    _initialized = false;
     await init();
     return _notes.where((note) => note.category == category).toList()
       ..sort((a, b) {
-        if (a.isPinned != b.isPinned) {
-          return b.isPinned ? 1 : -1;
-        }
+        if (a.isPinned != b.isPinned) return b.isPinned ? 1 : -1;
         return b.updatedAt.compareTo(a.updatedAt);
       });
   }

@@ -5,17 +5,31 @@ import '../models/sticky_note.dart';
 import 'package:uuid/uuid.dart';
 
 const _key = 'sticky_notes_v1';
+const _trashKey = 'trashed_stickies_v1';
+const _pinnedKey = 'pinned_stickies_v1';
 const _uuid = Uuid();
+
+// TRACKS THE ACTIVE FLOATING COMPANION FOR THE NATIVE OVERLAY
+final poppedOutNoteProvider = StateProvider<StickyNote?>((ref) => null);
 
 class StickyNotesNotifier extends StateNotifier<List<StickyNote>> {
   StickyNotesNotifier() : super([]);
+  
+  List<String> _pinnedIds = [];
 
   Future<void> loadNotes() async {
     final prefs = await SharedPreferences.getInstance();
+    
+    // Load active notes
     final raw = prefs.getString(_key);
-    if (raw == null) return;
-    final list = jsonDecode(raw) as List;
-    state = list.map((m) => StickyNote.fromMap(Map<String, dynamic>.from(m))).toList();
+    if (raw != null) {
+      final list = jsonDecode(raw) as List;
+      state = list.map((m) => StickyNote.fromMap(Map<String, dynamic>.from(m))).toList();
+    }
+    
+    // Load pinned states
+    final rawPinned = prefs.getString(_pinnedKey) ?? '[]';
+    _pinnedIds = List<String>.from(jsonDecode(rawPinned));
   }
 
   Future<void> _save() async {
@@ -36,15 +50,85 @@ class StickyNotesNotifier extends StateNotifier<List<StickyNote>> {
     await _save();
   }
 
-  Future<void> deleteNote(String id) async {
+  Future<void> updateNoteContent(String id, String newContent) async {
+    state = state.map((n) {
+      if (n.id == id) {
+        return n.copyWith(content: newContent);
+      }
+      return n;
+    }).toList();
+    await _save();
+  }
+
+  bool isPinned(String id) => _pinnedIds.contains(id);
+
+  Future<void> togglePin(String id) async {
+    if (_pinnedIds.contains(id)) {
+      _pinnedIds.remove(id);
+    } else {
+      _pinnedIds.add(id);
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_pinnedKey, jsonEncode(_pinnedIds));
+    state = [...state]; // Force UI refresh to re-sort the board
+  }
+
+  Future<void> moveToTrash(String id) async {
+    final noteIndex = state.indexWhere((n) => n.id == id);
+    if (noteIndex == -1) return;
+    final note = state[noteIndex];
+    
+    // Remove from active board
     state = state.where((n) => n.id != id).toList();
     await _save();
+    
+    // Add to trash list
+    final prefs = await SharedPreferences.getInstance();
+    final rawTrash = prefs.getString(_trashKey) ?? '[]';
+    final trashList = jsonDecode(rawTrash) as List;
+    trashList.insert(0, note.toMap());
+    await prefs.setString(_trashKey, jsonEncode(trashList));
+  }
+
+  Future<List<StickyNote>> getTrashedNotes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final rawTrash = prefs.getString(_trashKey) ?? '[]';
+    final trashList = jsonDecode(rawTrash) as List;
+    return trashList.map((m) => StickyNote.fromMap(Map<String, dynamic>.from(m))).toList();
+  }
+
+  Future<void> restoreFromTrash(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final rawTrash = prefs.getString(_trashKey) ?? '[]';
+    final trashList = jsonDecode(rawTrash) as List;
+    
+    final noteMap = trashList.firstWhere((m) => m['id'] == id, orElse: () => null);
+    if (noteMap != null) {
+      // Remove from trash
+      trashList.removeWhere((m) => m['id'] == id);
+      await prefs.setString(_trashKey, jsonEncode(trashList));
+      
+      // Add back to active board
+      final note = StickyNote.fromMap(Map<String, dynamic>.from(noteMap));
+      state = [note, ...state];
+      await _save();
+    }
+  }
+
+  Future<void> permanentlyDeleteTrash(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final rawTrash = prefs.getString(_trashKey) ?? '[]';
+    final trashList = jsonDecode(rawTrash) as List;
+    trashList.removeWhere((m) => m['id'] == id);
+    await prefs.setString(_trashKey, jsonEncode(trashList));
   }
 
   Future<void> clearAll() async {
     state = [];
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_key);
+    _pinnedIds.clear();
+    await prefs.remove(_pinnedKey);
   }
 }
 
