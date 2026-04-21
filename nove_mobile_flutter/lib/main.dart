@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'dart:convert';
 
+import 'services/database_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/sticky_board_screen.dart';
 import 'screens/settings_screen.dart';
@@ -76,7 +77,6 @@ class _OSFloatingCompanionState extends State<OSFloatingCompanion> {
 
   Widget _buildBubble() {
     return GestureDetector(
-      // FIX: Removed 'await' to prevent deadlocks
       onDoubleTap: () {
         setState(() => _isBubble = false);
         FlutterOverlayWindow.resizeOverlay(300, 300, true);
@@ -122,7 +122,6 @@ class _OSFloatingCompanionState extends State<OSFloatingCompanion> {
                 Row(
                   children: [
                     IconButton(
-                      // FIX: Removed 'await' to prevent deadlocks
                       onPressed: () {
                         setState(() => _isBubble = true);
                         FlutterOverlayWindow.resizeOverlay(60, 60, true);
@@ -131,7 +130,6 @@ class _OSFloatingCompanionState extends State<OSFloatingCompanion> {
                       tooltip: 'Minimize to Bubble',
                     ),
                     IconButton(
-                      // FIX: Fire-and-forget. The window will close instantly and the main app poller will restore the note automatically.
                       onPressed: () {
                         FlutterOverlayWindow.shareData("restore:$_id");
                         FlutterOverlayWindow.closeOverlay();
@@ -210,6 +208,9 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+  // FIX: Initialise the database before the UI starts so saved notes are
+  // available immediately when HomeScreen first renders.
+  await DatabaseService.init();
   runApp(const ProviderScope(child: NoveApp()));
 }
 
@@ -406,7 +407,6 @@ class _NoveShellState extends ConsumerState<NoveShell> with WidgetsBindingObserv
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     
-    // Listens for the restore signal from the OS overlay window
     FlutterOverlayWindow.overlayListener.listen((event) {
       if (event.toString().startsWith("restore:")) {
         if (mounted) {
@@ -425,7 +425,6 @@ class _NoveShellState extends ConsumerState<NoveShell> with WidgetsBindingObserv
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) async {
-    // If app is opened and background window died, restore the note automatically
     if (state == AppLifecycleState.resumed) {
       try {
         bool isActive = await FlutterOverlayWindow.isActive();

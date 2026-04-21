@@ -23,13 +23,11 @@ class NotesState {
 }
 
 class NotesNotifier extends StateNotifier<NotesState> {
-  // FIX: Force notes to load instantly when the provider boots up
   NotesNotifier() : super(NotesState(isLoading: true)) {
     loadNotes();
   }
 
   Future<void> loadNotes() async {
-    // Only show loading if empty so the UI doesn't flash when returning from the editor
     if (state.notes.isEmpty) {
       state = state.copyWith(isLoading: true);
     }
@@ -57,8 +55,7 @@ class NotesNotifier extends StateNotifier<NotesState> {
     String? category,
   }) async {
     final note = await NoteService.createNote(content, colorLabel: colorLabel, category: category);
-    
-    // OPTIMISTIC UPDATE: Inject instantly into UI without loading spinner
+    // Optimistic: prepend immediately, then sync from disk
     state = state.copyWith(notes: [note, ...state.notes]);
     await loadNotes();
     return note;
@@ -80,29 +77,25 @@ class NotesNotifier extends StateNotifier<NotesState> {
       colorLabel: colorLabel,
       category: category,
     );
-
-    // OPTIMISTIC UPDATE: Inject instantly into UI
+    // Optimistic local update, then sync
     final updatedNotes = state.notes.map((n) {
-      if (n.id == id) {
-        return n.copyWith(
-          content: content ?? n.content,
-          isPinned: isPinned ?? n.isPinned,
-          isFavorite: isFavorite ?? n.isFavorite,
-          colorLabel: colorLabel ?? n.colorLabel,
-          category: category ?? n.category,
-        );
-      }
-      return n;
+      if (n.id != id) return n;
+      return n.copyWith(
+        content: content ?? n.content,
+        isPinned: isPinned ?? n.isPinned,
+        isFavorite: isFavorite ?? n.isFavorite,
+        colorLabel: colorLabel ?? n.colorLabel,
+        category: category ?? n.category,
+      );
     }).toList();
-
     state = state.copyWith(notes: updatedNotes);
     await loadNotes();
   }
 
   Future<void> deleteNote(String id) async {
-    await NoteService.deleteNote(id);
+    // Optimistic remove first so the card disappears instantly
     state = state.copyWith(notes: state.notes.where((n) => n.id != id).toList());
-    await loadNotes();
+    await NoteService.deleteNote(id);
   }
 
   Future<void> togglePin(String id) async {

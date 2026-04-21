@@ -5,14 +5,15 @@ import 'database_service.dart';
 class NoteService {
   static const _uuid = Uuid();
 
-  /// Calculate read time in minutes
+  /// Calculate read time in minutes (returns 0 for empty content)
   static double _calculateReadTime(String content) {
     final wordCount = content
         .trim()
         .split(RegExp(r'\s+'))
         .where((s) => s.isNotEmpty)
         .length;
-    return (wordCount / 200).ceil().toDouble().clamp(1, double.infinity);
+    if (wordCount == 0) return 0.0;
+    return (wordCount / 200).clamp(0.5, double.infinity);
   }
 
   /// Calculate word count
@@ -34,33 +35,27 @@ class NoteService {
     return firstLine;
   }
 
-  /// Get all notes
   static Future<List<Note>> getAllNotes() async {
     return await DatabaseService.getAllNotes();
   }
 
-  /// Get note by id
   static Future<Note?> getNoteById(String id) async {
     return await DatabaseService.getNoteById(id);
   }
 
-  /// Get pinned notes
   static Future<List<Note>> getPinnedNotes() async {
     return await DatabaseService.getPinnedNotes();
   }
 
-  /// Get favorite notes
   static Future<List<Note>> getFavoriteNotes() async {
     return await DatabaseService.getFavoriteNotes();
   }
 
-  /// Search notes
   static Future<List<Note>> searchNotes(String query) async {
     if (query.isEmpty) return getAllNotes();
     return await DatabaseService.searchNotes(query);
   }
 
-  /// Create a new note
   static Future<Note> createNote(
     String content, {
     String? category,
@@ -92,7 +87,6 @@ class NoteService {
     return note;
   }
 
-  /// Update a note
   static Future<Note?> updateNote(
     String id, {
     String? content,
@@ -128,37 +122,31 @@ class NoteService {
     return updatedNote;
   }
 
-  /// Delete a note
   static Future<bool> deleteNote(String id) async {
     final affected = await DatabaseService.deleteNote(id);
     return affected > 0;
   }
 
-  /// Toggle pin status
   static Future<Note?> togglePin(String id) async {
     final note = await DatabaseService.getNoteById(id);
     if (note == null) return null;
     return await updateNote(id, isPinned: !note.isPinned);
   }
 
-  /// Toggle favorite status
   static Future<Note?> toggleFavorite(String id) async {
     final note = await DatabaseService.getNoteById(id);
     if (note == null) return null;
     return await updateNote(id, isFavorite: !note.isFavorite);
   }
 
-  /// Get notes count
   static Future<int> getNotesCount() async {
     return await DatabaseService.getNotesCount();
   }
 
-  /// Get notes by category
   static Future<List<Note>> getNotesByCategory(String category) async {
     return await DatabaseService.getNotesByCategory(category);
   }
 
-  /// Delete all notes (Danger Zone)
   static Future<void> clearAll() async {
     final notes = await getAllNotes();
     for (final note in notes) {
