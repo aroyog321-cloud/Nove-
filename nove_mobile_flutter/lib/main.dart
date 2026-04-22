@@ -88,9 +88,9 @@ class _OSFloatingCompanionState extends State<OSFloatingCompanion> {
           color: _bgColor,
           shape: BoxShape.circle,
           boxShadow: [
-            BoxShadow(color: _bgColor.withOpacity(0.4), blurRadius: 25, spreadRadius: 5),
+            BoxShadow(color: _bgColor.withValues(alpha: 0.4), blurRadius: 25, spreadRadius: 5),
           ],
-          border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
         ),
         child: const Center(
           child: Icon(Icons.edit_note_rounded, color: Color(0xFF412402), size: 28),
@@ -107,7 +107,7 @@ class _OSFloatingCompanionState extends State<OSFloatingCompanion> {
         color: _bgColor,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 32, offset: const Offset(0, 12)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 32, offset: const Offset(0, 12)),
         ],
       ),
       child: Padding(
@@ -239,7 +239,6 @@ class NoveApp extends ConsumerWidget {
       colorScheme: ColorScheme.fromSeed(
         seedColor: NoveColors.terracotta,
         brightness: Brightness.light,
-        background: NoveColors.cream,
         surface: NoveColors.warmWhite,
       ),
       textTheme: GoogleFonts.dmSansTextTheme().copyWith(
@@ -291,7 +290,6 @@ class NoveApp extends ConsumerWidget {
       colorScheme: ColorScheme.fromSeed(
         seedColor: NoveColors.terracottaLight,
         brightness: Brightness.dark,
-        background: NoveColors.deepDark,
         surface: NoveColors.cardDark,
       ),
       textTheme: GoogleFonts.dmSansTextTheme(
@@ -373,11 +371,10 @@ class _AppEntryState extends State<_AppEntry> {
         onDone: () async {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('onboarding_done', true);
-          if (mounted) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const NoveShell()),
-            );
-          }
+          if (!context.mounted) return;
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const NoveShell()),
+          );
         },
       );
     }

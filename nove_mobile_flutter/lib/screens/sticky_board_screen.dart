@@ -111,7 +111,7 @@ class _StickyBoardScreenState extends ConsumerState<StickyBoardScreen> {
         'id': note.id,
         'title': note.title,
         'content': note.content,
-        'color': _getNoteColor(note.color).value,
+        'color': _getNoteColor(note.color).toARGB32(),
         'isBubble': true,
       });
 
@@ -223,11 +223,10 @@ class _StickyBoardScreenState extends ConsumerState<StickyBoardScreen> {
                                 await FlutterOverlayWindow.closeOverlay();
                               } catch (_) {}
                               ref.read(poppedOutNoteProvider.notifier).state = null;
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Floating note restored.')),
-                                );
-                              }
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Floating note restored.')),
+                              );
                             },
                             icon: const Icon(Icons.settings_backup_restore, color: NoveColors.terracotta),
                             tooltip: 'Restore Floating Note',
@@ -266,7 +265,6 @@ class _StickyBoardScreenState extends ConsumerState<StickyBoardScreen> {
                             width: double.infinity,
                             child: Stack(
                               children: visibleNotes.asMap().entries.map((entry) {
-                                final index = entry.key;
                                 final note = entry.value;
                                 final isPinned = ref.read(stickyNotesProvider.notifier).isPinned(note.id);
                                 
@@ -325,7 +323,7 @@ class DotGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = NoveColors.warmGray300.withOpacity(0.3)
+      ..color = NoveColors.warmGray300.withValues(alpha: 0.3)
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
 
@@ -422,7 +420,7 @@ class _StickyCardState extends State<_StickyCard> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF31312D).withOpacity(0.06),
+            color: const Color(0xFF31312D).withValues(alpha: 0.06),
             blurRadius: 32,
             offset: const Offset(0, 12),
           ),
@@ -552,7 +550,7 @@ class _InputBar extends StatelessWidget {
     return Container(
       padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).viewInsets.bottom + 16),
       decoration: BoxDecoration(
-        color: const Color(0xFFE5E2DC).withOpacity(0.95),
+        color: const Color(0xFFE5E2DC).withValues(alpha: 0.95),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Row(

@@ -30,17 +30,17 @@ class Note {
 
   factory Note.fromMap(Map<String, dynamic> map) {
     return Note(
-      id: map['id'] as String,
-      title: map['title'] as String,
-      content: map['content'] as String,
-      category: map['category'] as String?,
-      colorLabel: map['color_label'] as String? ?? '#FFFFFF',
-      isPinned: (map['is_pinned'] as int? ?? 0) == 1,
-      isFavorite: (map['is_favorite'] as int? ?? 0) == 1,
-      createdAt: map['created_at'] as int,
-      updatedAt: map['updated_at'] as int,
-      wordCount: map['word_count'] as int? ?? 0,
-      charCount: map['char_count'] as int? ?? 0,
+      id: map['id']?.toString() ?? '',
+      title: map['title']?.toString() ?? '',
+      content: map['content']?.toString() ?? '',
+      category: map['category']?.toString(),
+      colorLabel: map['color_label']?.toString() ?? '#FFFFFF',
+      isPinned: map['is_pinned'] == 1 || map['is_pinned'] == true || map['is_pinned'] == '1',
+      isFavorite: map['is_favorite'] == 1 || map['is_favorite'] == true || map['is_favorite'] == '1',
+      createdAt: (map['created_at'] as num?)?.toInt() ?? 0,
+      updatedAt: (map['updated_at'] as num?)?.toInt() ?? 0,
+      wordCount: (map['word_count'] as num?)?.toInt() ?? 0,
+      charCount: (map['char_count'] as num?)?.toInt() ?? 0,
       readTimeMinutes: (map['read_time_minutes'] as num?)?.toDouble() ?? 0.0,
     );
   }

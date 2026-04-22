@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../models/note.dart';
 import '../providers/notes_provider.dart';
 import '../theme/tokens.dart';
+import '../widgets/floating_companion.dart';
 import 'editor_screen.dart';
 
 const _categories = ['All', 'Work', 'Ideas', 'Personal', 'Urgent', '★ Starred'];
@@ -49,21 +50,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => EditorScreen(note: note)),
-    ).then((_) {
-      // Reload on return
-      if (mounted) ref.read(notesProvider.notifier).loadNotes();
-    });
+    ).then((_) => ref.read(notesProvider.notifier).loadNotes());
   }
 
   void _createNote() {
     HapticFeedback.mediumImpact();
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => EditorScreen()),
-    ).then((_) {
-      // Reload on return
-      if (mounted) ref.read(notesProvider.notifier).loadNotes();
-    });
+      MaterialPageRoute(builder: (_) => const EditorScreen()),
+    ).then((_) => ref.read(notesProvider.notifier).loadNotes());
   }
 
   List<Note> _getFilteredNotes(List<Note> notes) {
@@ -113,270 +108,305 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Scaffold(
       backgroundColor: NoveColors.bg(context),
-      resizeToAvoidBottomInset: false,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Header ─────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Header ─────────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        _getGreeting(),
-                        style: GoogleFonts.dmSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: NoveColors.secondaryText(context),
-                        ),
-                      ),
+                      // Greeting + search toggle
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _IconBtn(
-                            icon: _isSearching
-                                ? Icons.close_rounded
-                                : Icons.search_rounded,
-                            onTap: () {
-                              HapticFeedback.lightImpact();
-                              setState(() {
-                                _isSearching = !_isSearching;
-                                if (!_isSearching) {
-                                  _searchController.clear();
-                                  ref.read(notesProvider.notifier).loadNotes();
-                                }
-                              });
-                            },
-                            isDark: isDark,
+                          Text(
+                            _getGreeting(),
+                            style: GoogleFonts.dmSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: NoveColors.secondaryText(context),
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          _IconBtn(
-                            icon: Icons.sort_rounded,
-                            onTap: () {
-                              HapticFeedback.lightImpact();
-                              _showSortSheet(context);
-                            },
-                            isDark: isDark,
+                          Row(
+                            children: [
+                              _IconBtn(
+                                icon: _isSearching
+                                    ? Icons.close_rounded
+                                    : Icons.search_rounded,
+                                onTap: () {
+                                  HapticFeedback.lightImpact();
+                                  setState(() {
+                                    _isSearching = !_isSearching;
+                                    if (!_isSearching) {
+                                      _searchController.clear();
+                                      ref.read(notesProvider.notifier).loadNotes();
+                                    }
+                                  });
+                                },
+                                isDark: isDark,
+                              ),
+                              const SizedBox(width: 8),
+                              _IconBtn(
+                                icon: Icons.sort_rounded,
+                                onTap: () {
+                                  HapticFeedback.lightImpact();
+                                  _showSortSheet(context);
+                                },
+                                isDark: isDark,
+                              ),
+                            ],
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 4),
+
+                      // Title
+                      Text(
+                        'My Notes',
+                        style: GoogleFonts.lora(
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold,
+                          color: NoveColors.primaryText(context),
+                          letterSpacing: -0.5,
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'My Notes',
-                    style: GoogleFonts.lora(
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold,
-                      color: NoveColors.primaryText(context),
-                      letterSpacing: -0.5,
+                ),
+
+                // ── Search bar (expandable) ─────────────────────────────
+                AnimatedContainer(
+                  duration: NoveAnimation.fast,
+                  height: _isSearching ? 56 : 0,
+                  child: _isSearching
+                      ? Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: NoveColors.inputBg(context),
+                              borderRadius: BorderRadius.circular(NoveRadii.lg),
+                            ),
+                            child: TextField(
+                              controller: _searchController,
+                              autofocus: true,
+                              onChanged: _onSearch,
+                              style: GoogleFonts.dmSans(
+                                fontSize: 15,
+                                color: NoveColors.primaryText(context),
+                              ),
+                              decoration: InputDecoration(
+                                hintText: 'Search your notes...',
+                                hintStyle: GoogleFonts.dmSans(
+                                  color: NoveColors.mutedText(context),
+                                ),
+                                prefixIcon: Icon(Icons.search,
+                                    color: NoveColors.mutedText(context)),
+                                border: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 14),
+                              ),
+                            ),
+                          ),
+                        )
+                      : const SizedBox.shrink(),
+                ),
+
+                const SizedBox(height: 16),
+
+                // ── Stats row ──────────────────────────────────────────
+                if (!_isSearching)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _StatCard(
+                            label: 'Total notes',
+                            value: '$totalNotes',
+                            isDark: isDark,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _StatCard(
+                            label: 'Pinned',
+                            value: '$pinnedNotes',
+                            isDark: isDark,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _StatCard(
+                            label: 'Starred',
+                            value:
+                                '${notesState.notes.where((n) => n.isFavorite).length}',
+                            isDark: isDark,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
 
-            // ── Search bar ──────────────────────────────────────────────
-            AnimatedSize(
-              duration: NoveAnimation.fast,
-              curve: Curves.easeInOut,
-              child: _isSearching
-                  ? Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: NoveColors.inputBg(context),
-                          borderRadius: BorderRadius.circular(NoveRadii.lg),
-                        ),
-                        child: TextField(
-                          controller: _searchController,
-                          autofocus: true,
-                          onChanged: _onSearch,
-                          style: GoogleFonts.dmSans(
-                            fontSize: 15,
-                            color: NoveColors.primaryText(context),
+                const SizedBox(height: 14),
+
+                // ── Category Chips ─────────────────────────────────────
+                SizedBox(
+                  height: 36,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    itemCount: _categories.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (_, i) {
+                      final cat = _categories[i];
+                      final isActive = _selectedCategory == cat;
+                      final count = counts[cat] ?? 0;
+                      return GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _selectedCategory = cat);
+                        },
+                        child: AnimatedContainer(
+                          duration: NoveAnimation.fast,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isActive
+                                ? NoveColors.accent(context)
+                                : Colors.transparent,
+                            borderRadius:
+                                BorderRadius.circular(NoveRadii.full),
+                            border: isActive
+                                ? null
+                                : Border.all(
+                                    color: isDark
+                                        ? NoveColors.darkBorder
+                                        : NoveColors.warmGray300,
+                                    width: 0.5,
+                                  ),
                           ),
-                          decoration: InputDecoration(
-                            hintText: 'Search your notes...',
-                            hintStyle: GoogleFonts.dmSans(
-                              color: NoveColors.mutedText(context),
-                            ),
-                            prefixIcon: Icon(Icons.search, color: NoveColors.mutedText(context)),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          child: Row(
+                            children: [
+                              Text(
+                                cat,
+                                style: GoogleFonts.dmSans(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: isActive
+                                      ? Colors.white
+                                      : NoveColors.secondaryText(context),
+                                ),
+                              ),
+                              if (count > 0 && !isActive) ...[
+                                const SizedBox(width: 4),
+                                Text(
+                                  '($count)',
+                                  style: GoogleFonts.dmSans(
+                                    fontSize: 11,
+                                    color: NoveColors.mutedText(context),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
-                      ),
-                    )
-                  : const SizedBox(width: double.infinity, height: 0),
-            ),
-
-            const SizedBox(height: 16),
-
-            // ── Stats row ──────────────────────────────────────────
-            if (!_isSearching)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _StatCard(
-                        label: 'Total notes',
-                        value: '$totalNotes',
-                        isDark: isDark,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _StatCard(
-                        label: 'Pinned',
-                        value: '$pinnedNotes',
-                        isDark: isDark,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _StatCard(
-                        label: 'Starred',
-                        value: '${notesState.notes.where((n) => n.isFavorite).length}',
-                        isDark: isDark,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            const SizedBox(height: 14),
-
-            // ── Category Chips ─────────────────────────────────────
-            SizedBox(
-              height: 36,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                itemCount: _categories.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (_, i) {
-                  final cat = _categories[i];
-                  final isActive = _selectedCategory == cat;
-                  final count = counts[cat] ?? 0;
-                  return GestureDetector(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(() => _selectedCategory = cat);
+                      );
                     },
-                    child: AnimatedContainer(
-                      duration: NoveAnimation.fast,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: isActive ? NoveColors.accent(context) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(NoveRadii.full),
-                        border: isActive
-                            ? null
-                            : Border.all(
-                                color: isDark ? NoveColors.darkBorder : NoveColors.warmGray300,
-                                width: 0.5,
-                              ),
-                      ),
-                      child: Row(
-                        children: [
-                          Text(
-                            cat,
-                            style: GoogleFonts.dmSans(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: isActive ? Colors.white : NoveColors.secondaryText(context),
-                            ),
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                // ── Notes List ─────────────────────────────────────────
+                Expanded(
+                  child: notesState.isLoading
+                      ? Center(
+                          child: CircularProgressIndicator(
+                            color: NoveColors.accent(context),
+                            strokeWidth: 2,
                           ),
-                          if (count > 0 && !isActive) ...[
-                            const SizedBox(width: 4),
-                            Text(
-                              '($count)',
-                              style: GoogleFonts.dmSans(
-                                fontSize: 11,
-                                color: NoveColors.mutedText(context),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            const SizedBox(height: 14),
-
-            // ── Notes List ─────────────────────────────────────────
-            Expanded(
-              child: notesState.isLoading && filteredNotes.isEmpty
-                  ? Center(
-                      child: CircularProgressIndicator(
-                        color: NoveColors.accent(context),
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : filteredNotes.isEmpty
-                      ? _EmptyState(
-                          category: _selectedCategory,
-                          onCreateNote: _createNote,
-                          isDark: isDark,
                         )
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 120),
-                          itemCount: filteredNotes.length,
-                          itemBuilder: (_, index) {
-                            final note = filteredNotes[index];
-                            return _NoteCard(
-                              note: note,
+                      : filteredNotes.isEmpty
+                          ? _EmptyState(
+                              category: _selectedCategory,
+                              onCreateNote: _createNote,
                               isDark: isDark,
-                              onTap: () => _openNote(note),
-                              onDelete: () async {
-                                HapticFeedback.mediumImpact();
-                                await ref.read(notesProvider.notifier).deleteNote(note.id);
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Note deleted', style: GoogleFonts.dmSans()),
-                                      action: SnackBarAction(
-                                        label: 'Undo',
-                                        textColor: NoveColors.amber,
-                                        onPressed: () async {
-                                          await ref.read(notesProvider.notifier).createNote(
-                                                note.content,
-                                                colorLabel: note.colorLabel,
-                                                category: note.category,
-                                              );
-                                        },
-                                      ),
-                                      duration: const Duration(seconds: 4),
-                                    ),
-                                  );
-                                }
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.fromLTRB(24, 0, 24, 120),
+                              itemCount: filteredNotes.length,
+                              itemBuilder: (_, index) {
+                                final note = filteredNotes[index];
+                                return _NoteCard(
+                                  note: note,
+                                  isDark: isDark,
+                                  onTap: () => _openNote(note),
+                                  onDelete: () async {
+                                    HapticFeedback.mediumImpact();
+                                    await ref
+                                        .read(notesProvider.notifier)
+                                        .deleteNote(note.id);
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Note deleted',
+                                            style: GoogleFonts.dmSans(),
+                                          ),
+                                          action: SnackBarAction(
+                                            label: 'Undo',
+                                            textColor: NoveColors.amber,
+                                            onPressed: () async {
+                                              await ref
+                                                  .read(notesProvider.notifier)
+                                                  .createNote(note.content,
+                                                      colorLabel:
+                                                          note.colorLabel,
+                                                      category: note.category);
+                                            },
+                                          ),
+                                          duration:
+                                              const Duration(seconds: 4),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  onPin: () async {
+                                    HapticFeedback.mediumImpact();
+                                    await ref
+                                        .read(notesProvider.notifier)
+                                        .togglePin(note.id);
+                                  },
+                                  onFavorite: () async {
+                                    HapticFeedback.lightImpact();
+                                    await ref
+                                        .read(notesProvider.notifier)
+                                        .toggleFavorite(note.id);
+                                  },
+                                  onColorChange: (color) async {
+                                    HapticFeedback.lightImpact();
+                                    await ref
+                                        .read(notesProvider.notifier)
+                                        .updateNote(note.id,
+                                            colorLabel: color);
+                                  },
+                                );
                               },
-                              onPin: () async {
-                                HapticFeedback.mediumImpact();
-                                await ref.read(notesProvider.notifier).togglePin(note.id);
-                              },
-                              onFavorite: () async {
-                                HapticFeedback.lightImpact();
-                                await ref.read(notesProvider.notifier).toggleFavorite(note.id);
-                              },
-                              onColorChange: (color) async {
-                                HapticFeedback.lightImpact();
-                                await ref.read(notesProvider.notifier).updateNote(note.id, colorLabel: color);
-                              },
-                            );
-                          },
-                        ),
+                            ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+
+          // ── Floating Companion ──────────────────────────────────────
+          const FloatingCompanion(),
+        ],
       ),
       floatingActionButton: Container(
         decoration: BoxDecoration(
@@ -441,7 +471,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            for (final opt in ['Newest first', 'Oldest first', 'A → Z', 'Most words'])
+            for (final opt in [
+              'Newest first',
+              'Oldest first',
+              'A → Z',
+              'Most words',
+            ])
               ListTile(
                 title: Text(opt, style: GoogleFonts.dmSans(
                   color: NoveColors.primaryText(context),
@@ -451,7 +486,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   HapticFeedback.selectionClick();
                   Navigator.pop(context);
                 },
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             const SizedBox(height: 8),
           ],
@@ -461,12 +497,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
+// ─── Stat Card ────────────────────────────────────────────────────────────────
 class _StatCard extends StatelessWidget {
   final String label;
   final String value;
   final bool isDark;
 
-  const _StatCard({required this.label, required this.value, required this.isDark});
+  const _StatCard({
+    required this.label,
+    required this.value,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -475,7 +516,8 @@ class _StatCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: NoveColors.cardBg(context),
         borderRadius: BorderRadius.circular(NoveRadii.sm),
-        border: Border.all(color: NoveColors.cardBorder(context), width: 0.5),
+        border: Border.all(
+            color: NoveColors.cardBorder(context), width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -503,6 +545,7 @@ class _StatCard extends StatelessWidget {
   }
 }
 
+// ─── Icon Button ─────────────────────────────────────────────────────────────
 class _IconBtn extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
@@ -528,6 +571,7 @@ class _IconBtn extends StatelessWidget {
   }
 }
 
+// ─── Note Card ────────────────────────────────────────────────────────────────
 class _NoteCard extends StatelessWidget {
   final Note note;
   final bool isDark;
@@ -595,7 +639,8 @@ class _NoteCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
                   color: NoveColors.bg(context),
                   borderRadius: BorderRadius.circular(12),
@@ -615,7 +660,8 @@ class _NoteCard extends StatelessWidget {
                       ),
                     ),
                     if (note.isPinned)
-                      const Icon(Icons.push_pin, size: 14, color: NoveColors.terracotta),
+                      const Icon(Icons.push_pin,
+                          size: 14, color: NoveColors.terracotta),
                   ],
                 ),
               ),
@@ -644,19 +690,31 @@ class _NoteCard extends StatelessWidget {
                   onFavorite();
                 },
               ),
+              // Color picker row
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                 child: Row(
                   children: [
                     const SizedBox(width: 12),
-                    Icon(Icons.palette_outlined, size: 20, color: NoveColors.secondaryText(context)),
+                    Icon(Icons.palette_outlined,
+                        size: 20, color: NoveColors.secondaryText(context)),
                     const SizedBox(width: 12),
                     Text(
                       'Color label',
-                      style: GoogleFonts.dmSans(fontSize: 15, color: NoveColors.primaryText(context)),
+                      style: GoogleFonts.dmSans(
+                        fontSize: 15,
+                        color: NoveColors.primaryText(context),
+                      ),
                     ),
                     const Spacer(),
-                    for (final c in ['#C0452A', '#F5C842', '#5DCAA5', '#85B7EB', '#ED93B1', '#FFFFFF'])
+                    for (final c in [
+                      '#C0452A',
+                      '#F5C842',
+                      '#5DCAA5',
+                      '#85B7EB',
+                      '#ED93B1',
+                      '#FFFFFF',
+                    ])
                       GestureDetector(
                         onTap: () {
                           Navigator.pop(context);
@@ -669,14 +727,20 @@ class _NoteCard extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: c == '#FFFFFF'
                                 ? Colors.transparent
-                                : Color(int.parse(c.replaceFirst('#', '0xFF'))),
+                                : Color(int.parse(
+                                    c.replaceFirst('#', '0xFF'))),
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: note.colorLabel == c ? NoveColors.terracotta : NoveColors.warmGray300,
+                              color: note.colorLabel == c
+                                  ? NoveColors.terracotta
+                                  : NoveColors.warmGray300,
                               width: note.colorLabel == c ? 2.5 : 1,
                             ),
                           ),
-                          child: c == '#FFFFFF' ? const Icon(Icons.block, size: 12, color: NoveColors.warmGray400) : null,
+                          child: c == '#FFFFFF'
+                              ? const Icon(Icons.block,
+                                  size: 12, color: NoveColors.warmGray400)
+                              : null,
                         ),
                       ),
                     const SizedBox(width: 12),
@@ -686,7 +750,9 @@ class _NoteCard extends StatelessWidget {
               _ContextAction(
                 icon: Icons.share_outlined,
                 label: 'Share note',
-                onTap: () => Navigator.pop(context),
+                onTap: () {
+                  Navigator.pop(context);
+                },
               ),
               _ContextAction(
                 icon: Icons.delete_outline,
@@ -724,7 +790,14 @@ class _NoteCard extends StatelessWidget {
           children: [
             Icon(Icons.delete_outline, color: Colors.white, size: 22),
             SizedBox(height: 4),
-            Text('Delete', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+            Text(
+              'Delete',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ),
@@ -741,34 +814,40 @@ class _NoteCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: NoveColors.cardBg(context),
             borderRadius: BorderRadius.circular(NoveRadii.lg),
-            border: Border.all(color: NoveColors.cardBorder(context), width: 0.5),
+            border: Border.all(
+                color: NoveColors.cardBorder(context), width: 0.5),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 4,
-                height: double.infinity,
-                constraints: const BoxConstraints(minHeight: 80),
-                decoration: BoxDecoration(
-                  color: borderColor,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(NoveRadii.lg),
-                    bottomLeft: Radius.circular(NoveRadii.lg),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Color bar
+                Container(
+                  width: 4,
+                  constraints: const BoxConstraints(minHeight: 80),
+                  decoration: BoxDecoration(
+                    color: borderColor,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(NoveRadii.lg),
+                      bottomLeft: Radius.circular(NoveRadii.lg),
+                    ),
                   ),
                 ),
-              ),
+              // Content
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Category + time
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           if ((note.category ?? '').isNotEmpty)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
                                 color: borderColor.withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(6),
@@ -795,6 +874,7 @@ class _NoteCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 6),
+                      // Title
                       Text(
                         note.title.isNotEmpty ? note.title : 'Untitled',
                         style: GoogleFonts.lora(
@@ -807,6 +887,7 @@ class _NoteCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
+                      // Preview
                       Text(
                         note.content.isNotEmpty ? note.content : ' ',
                         style: GoogleFonts.dmSans(
@@ -818,14 +899,18 @@ class _NoteCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 10),
+                      // Footer
                       Row(
                         children: [
                           if (note.isPinned)
-                            Icon(Icons.push_pin_rounded, size: 13, color: NoveColors.accent(context)),
+                            Icon(Icons.push_pin_rounded,
+                                size: 13,
+                                color: NoveColors.accent(context)),
                           if (note.isFavorite)
                             Padding(
                               padding: const EdgeInsets.only(left: 4),
-                              child: Icon(Icons.star_rounded, size: 13, color: NoveColors.amber),
+                              child: Icon(Icons.star_rounded,
+                                  size: 13, color: NoveColors.amber),
                             ),
                           const Spacer(),
                           if (note.wordCount > 0)
@@ -844,7 +929,8 @@ class _NoteCard extends StatelessWidget {
                   ),
                 ),
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -852,6 +938,7 @@ class _NoteCard extends StatelessWidget {
   }
 }
 
+// ─── Context Menu Action ──────────────────────────────────────────────────────
 class _ContextAction extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -870,13 +957,22 @@ class _ContextAction extends StatelessWidget {
     final c = color ?? NoveColors.primaryText(context);
     return ListTile(
       leading: Icon(icon, size: 20, color: c),
-      title: Text(label, style: GoogleFonts.dmSans(fontSize: 15, color: c, fontWeight: FontWeight.w500)),
+      title: Text(
+        label,
+        style: GoogleFonts.dmSans(
+          fontSize: 15,
+          color: c,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
       onTap: onTap,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     );
   }
 }
 
+// ─── Empty State ──────────────────────────────────────────────────────────────
 class _EmptyState extends StatelessWidget {
   final String category;
   final VoidCallback onCreateNote;
@@ -898,18 +994,24 @@ class _EmptyState extends StatelessWidget {
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              color: isDark ? NoveColors.cardDark : NoveColors.warmGray100,
+              color: isDark
+                  ? NoveColors.cardDark
+                  : NoveColors.warmGray100,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Icon(
-              category == '★ Starred' ? Icons.star_outline : Icons.edit_note_rounded,
+              category == '★ Starred'
+                  ? Icons.star_outline
+                  : Icons.edit_note_rounded,
               size: 36,
               color: NoveColors.warmGray400,
             ),
           ),
           const SizedBox(height: 20),
           Text(
-            category == 'All' ? 'Your first note is\none tap away.' : 'No notes in "$category" yet.',
+            category == 'All'
+                ? 'Your first note is\none tap away.'
+                : 'No notes in "$category" yet.',
             textAlign: TextAlign.center,
             style: GoogleFonts.lora(
               fontSize: 20,
