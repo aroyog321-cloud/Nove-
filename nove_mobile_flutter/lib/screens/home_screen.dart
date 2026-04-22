@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import '../models/note.dart';
 import '../providers/notes_provider.dart';
 import '../theme/tokens.dart';
-import '../widgets/floating_companion.dart';
+// Note: Removed the floating_companion.dart import
 import 'editor_screen.dart';
 
 const _categories = ['All', 'Work', 'Ideas', 'Personal', 'Urgent', '★ Starred'];
@@ -108,305 +108,298 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Scaffold(
       backgroundColor: NoveColors.bg(context),
-      body: Stack(
-        children: [
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ── Header ─────────────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header ─────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Greeting + search toggle
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Greeting + search toggle
+                      Text(
+                        _getGreeting(),
+                        style: GoogleFonts.dmSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: NoveColors.secondaryText(context),
+                        ),
+                      ),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            _getGreeting(),
-                            style: GoogleFonts.dmSans(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: NoveColors.secondaryText(context),
-                            ),
+                          _IconBtn(
+                            icon: _isSearching
+                                ? Icons.close_rounded
+                                : Icons.search_rounded,
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              setState(() {
+                                _isSearching = !_isSearching;
+                                if (!_isSearching) {
+                                  _searchController.clear();
+                                  ref.read(notesProvider.notifier).loadNotes();
+                                }
+                              });
+                            },
+                            isDark: isDark,
                           ),
-                          Row(
-                            children: [
-                              _IconBtn(
-                                icon: _isSearching
-                                    ? Icons.close_rounded
-                                    : Icons.search_rounded,
-                                onTap: () {
-                                  HapticFeedback.lightImpact();
-                                  setState(() {
-                                    _isSearching = !_isSearching;
-                                    if (!_isSearching) {
-                                      _searchController.clear();
-                                      ref.read(notesProvider.notifier).loadNotes();
-                                    }
-                                  });
-                                },
-                                isDark: isDark,
-                              ),
-                              const SizedBox(width: 8),
-                              _IconBtn(
-                                icon: Icons.sort_rounded,
-                                onTap: () {
-                                  HapticFeedback.lightImpact();
-                                  _showSortSheet(context);
-                                },
-                                isDark: isDark,
-                              ),
-                            ],
+                          const SizedBox(width: 8),
+                          _IconBtn(
+                            icon: Icons.sort_rounded,
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              _showSortSheet(context);
+                            },
+                            isDark: isDark,
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
-
-                      // Title
-                      Text(
-                        'My Notes',
-                        style: GoogleFonts.lora(
-                          fontSize: 30,
-                          fontWeight: FontWeight.bold,
-                          color: NoveColors.primaryText(context),
-                          letterSpacing: -0.5,
-                        ),
-                      ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 4),
 
-                // ── Search bar (expandable) ─────────────────────────────
-                AnimatedContainer(
-                  duration: NoveAnimation.fast,
-                  height: _isSearching ? 56 : 0,
-                  child: _isSearching
-                      ? Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: NoveColors.inputBg(context),
-                              borderRadius: BorderRadius.circular(NoveRadii.lg),
-                            ),
-                            child: TextField(
-                              controller: _searchController,
-                              autofocus: true,
-                              onChanged: _onSearch,
-                              style: GoogleFonts.dmSans(
-                                fontSize: 15,
-                                color: NoveColors.primaryText(context),
-                              ),
-                              decoration: InputDecoration(
-                                hintText: 'Search your notes...',
-                                hintStyle: GoogleFonts.dmSans(
-                                  color: NoveColors.mutedText(context),
-                                ),
-                                prefixIcon: Icon(Icons.search,
-                                    color: NoveColors.mutedText(context)),
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 14),
-                              ),
-                            ),
-                          ),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-
-                const SizedBox(height: 16),
-
-                // ── Stats row ──────────────────────────────────────────
-                if (!_isSearching)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _StatCard(
-                            label: 'Total notes',
-                            value: '$totalNotes',
-                            isDark: isDark,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _StatCard(
-                            label: 'Pinned',
-                            value: '$pinnedNotes',
-                            isDark: isDark,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _StatCard(
-                            label: 'Starred',
-                            value:
-                                '${notesState.notes.where((n) => n.isFavorite).length}',
-                            isDark: isDark,
-                          ),
-                        ),
-                      ],
+                  // Title
+                  Text(
+                    'My Notes',
+                    style: GoogleFonts.lora(
+                      fontSize: 30,
+                      fontWeight: FontWeight.bold,
+                      color: NoveColors.primaryText(context),
+                      letterSpacing: -0.5,
                     ),
                   ),
+                ],
+              ),
+            ),
 
-                const SizedBox(height: 14),
-
-                // ── Category Chips ─────────────────────────────────────
-                SizedBox(
-                  height: 36,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    itemCount: _categories.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (_, i) {
-                      final cat = _categories[i];
-                      final isActive = _selectedCategory == cat;
-                      final count = counts[cat] ?? 0;
-                      return GestureDetector(
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          setState(() => _selectedCategory = cat);
-                        },
-                        child: AnimatedContainer(
-                          duration: NoveAnimation.fast,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isActive
-                                ? NoveColors.accent(context)
-                                : Colors.transparent,
-                            borderRadius:
-                                BorderRadius.circular(NoveRadii.full),
-                            border: isActive
-                                ? null
-                                : Border.all(
-                                    color: isDark
-                                        ? NoveColors.darkBorder
-                                        : NoveColors.warmGray300,
-                                    width: 0.5,
-                                  ),
+            // ── Search bar (expandable) ─────────────────────────────
+            AnimatedContainer(
+              duration: NoveAnimation.fast,
+              height: _isSearching ? 56 : 0,
+              child: _isSearching
+                  ? Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: NoveColors.inputBg(context),
+                          borderRadius: BorderRadius.circular(NoveRadii.lg),
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          autofocus: true,
+                          onChanged: _onSearch,
+                          style: GoogleFonts.dmSans(
+                            fontSize: 15,
+                            color: NoveColors.primaryText(context),
                           ),
-                          child: Row(
-                            children: [
-                              Text(
-                                cat,
-                                style: GoogleFonts.dmSans(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: isActive
-                                      ? Colors.white
-                                      : NoveColors.secondaryText(context),
-                                ),
-                              ),
-                              if (count > 0 && !isActive) ...[
-                                const SizedBox(width: 4),
-                                Text(
-                                  '($count)',
-                                  style: GoogleFonts.dmSans(
-                                    fontSize: 11,
-                                    color: NoveColors.mutedText(context),
-                                  ),
-                                ),
-                              ],
-                            ],
+                          decoration: InputDecoration(
+                            hintText: 'Search your notes...',
+                            hintStyle: GoogleFonts.dmSans(
+                              color: NoveColors.mutedText(context),
+                            ),
+                            prefixIcon: Icon(Icons.search,
+                                color: NoveColors.mutedText(context)),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 14),
                           ),
                         ),
-                      );
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 14),
-
-                // ── Notes List ─────────────────────────────────────────
-                Expanded(
-                  child: notesState.isLoading
-                      ? Center(
-                          child: CircularProgressIndicator(
-                            color: NoveColors.accent(context),
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : filteredNotes.isEmpty
-                          ? _EmptyState(
-                              category: _selectedCategory,
-                              onCreateNote: _createNote,
-                              isDark: isDark,
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.fromLTRB(24, 0, 24, 120),
-                              itemCount: filteredNotes.length,
-                              itemBuilder: (_, index) {
-                                final note = filteredNotes[index];
-                                return _NoteCard(
-                                  note: note,
-                                  isDark: isDark,
-                                  onTap: () => _openNote(note),
-                                  onDelete: () async {
-                                    HapticFeedback.mediumImpact();
-                                    await ref
-                                        .read(notesProvider.notifier)
-                                        .deleteNote(note.id);
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Note deleted',
-                                            style: GoogleFonts.dmSans(),
-                                          ),
-                                          action: SnackBarAction(
-                                            label: 'Undo',
-                                            textColor: NoveColors.amber,
-                                            onPressed: () async {
-                                              await ref
-                                                  .read(notesProvider.notifier)
-                                                  .createNote(note.content,
-                                                      colorLabel:
-                                                          note.colorLabel,
-                                                      category: note.category);
-                                            },
-                                          ),
-                                          duration:
-                                              const Duration(seconds: 4),
-                                        ),
-                                      );
-                                    }
-                                  },
-                                  onPin: () async {
-                                    HapticFeedback.mediumImpact();
-                                    await ref
-                                        .read(notesProvider.notifier)
-                                        .togglePin(note.id);
-                                  },
-                                  onFavorite: () async {
-                                    HapticFeedback.lightImpact();
-                                    await ref
-                                        .read(notesProvider.notifier)
-                                        .toggleFavorite(note.id);
-                                  },
-                                  onColorChange: (color) async {
-                                    HapticFeedback.lightImpact();
-                                    await ref
-                                        .read(notesProvider.notifier)
-                                        .updateNote(note.id,
-                                            colorLabel: color);
-                                  },
-                                );
-                              },
-                            ),
-                ),
-              ],
+                      ),
+                    )
+                  : const SizedBox.shrink(),
             ),
-          ),
 
-          // ── Floating Companion ──────────────────────────────────────
-          const FloatingCompanion(),
-        ],
+            const SizedBox(height: 16),
+
+            // ── Stats row ──────────────────────────────────────────
+            if (!_isSearching)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _StatCard(
+                        label: 'Total notes',
+                        value: '$totalNotes',
+                        isDark: isDark,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _StatCard(
+                        label: 'Pinned',
+                        value: '$pinnedNotes',
+                        isDark: isDark,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _StatCard(
+                        label: 'Starred',
+                        value:
+                            '${notesState.notes.where((n) => n.isFavorite).length}',
+                        isDark: isDark,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            const SizedBox(height: 14),
+
+            // ── Category Chips ─────────────────────────────────────
+            SizedBox(
+              height: 36,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                itemCount: _categories.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (_, i) {
+                  final cat = _categories[i];
+                  final isActive = _selectedCategory == cat;
+                  final count = counts[cat] ?? 0;
+                  return GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _selectedCategory = cat);
+                    },
+                    child: AnimatedContainer(
+                      duration: NoveAnimation.fast,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isActive
+                            ? NoveColors.accent(context)
+                            : Colors.transparent,
+                        borderRadius:
+                            BorderRadius.circular(NoveRadii.full),
+                        border: isActive
+                            ? null
+                            : Border.all(
+                                color: isDark
+                                    ? NoveColors.darkBorder
+                                    : NoveColors.warmGray300,
+                                width: 0.5,
+                              ),
+                      ),
+                      child: Row(
+                        children: [
+                          Text(
+                            cat,
+                            style: GoogleFonts.dmSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isActive
+                                  ? Colors.white
+                                  : NoveColors.secondaryText(context),
+                            ),
+                          ),
+                          if (count > 0 && !isActive) ...[
+                            const SizedBox(width: 4),
+                            Text(
+                              '($count)',
+                              style: GoogleFonts.dmSans(
+                                fontSize: 11,
+                                color: NoveColors.mutedText(context),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            const SizedBox(height: 14),
+
+            // ── Notes List ─────────────────────────────────────────
+            Expanded(
+              child: notesState.isLoading
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        color: NoveColors.accent(context),
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : filteredNotes.isEmpty
+                      ? _EmptyState(
+                          category: _selectedCategory,
+                          onCreateNote: _createNote,
+                          isDark: isDark,
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 120),
+                          itemCount: filteredNotes.length,
+                          itemBuilder: (_, index) {
+                            final note = filteredNotes[index];
+                            return _NoteCard(
+                              note: note,
+                              isDark: isDark,
+                              onTap: () => _openNote(note),
+                              onDelete: () async {
+                                HapticFeedback.mediumImpact();
+                                await ref
+                                    .read(notesProvider.notifier)
+                                    .deleteNote(note.id);
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context)
+                                      .showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Note deleted',
+                                        style: GoogleFonts.dmSans(),
+                                      ),
+                                      action: SnackBarAction(
+                                        label: 'Undo',
+                                        textColor: NoveColors.amber,
+                                        onPressed: () async {
+                                          await ref
+                                              .read(notesProvider.notifier)
+                                              .createNote(note.content,
+                                                  colorLabel:
+                                                      note.colorLabel,
+                                                  category: note.category);
+                                        },
+                                      ),
+                                      duration:
+                                          const Duration(seconds: 4),
+                                    ),
+                                  );
+                                }
+                              },
+                              onPin: () async {
+                                HapticFeedback.mediumImpact();
+                                await ref
+                                    .read(notesProvider.notifier)
+                                    .togglePin(note.id);
+                              },
+                              onFavorite: () async {
+                                HapticFeedback.lightImpact();
+                                await ref
+                                    .read(notesProvider.notifier)
+                                    .toggleFavorite(note.id);
+                              },
+                              onColorChange: (color) async {
+                                HapticFeedback.lightImpact();
+                                await ref
+                                    .read(notesProvider.notifier)
+                                    .updateNote(note.id,
+                                        colorLabel: color);
+                              },
+                            );
+                          },
+                        ),
+            ),
+          ],
+        ),
       ),
       floatingActionButton: Container(
         decoration: BoxDecoration(

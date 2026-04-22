@@ -159,6 +159,7 @@ class _StickyBoardScreenState extends ConsumerState<StickyBoardScreen> {
   Widget build(BuildContext context) {
     final allNotes = ref.watch(stickyNotesProvider);
     final poppedNote = ref.watch(poppedOutNoteProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     
     final visibleNotes = allNotes.where((n) => n.id != poppedNote?.id).toList();
     visibleNotes.sort((a, b) {
@@ -170,12 +171,12 @@ class _StickyBoardScreenState extends ConsumerState<StickyBoardScreen> {
     });
 
     return Scaffold(
-      backgroundColor: NoveColors.cream,
+      backgroundColor: NoveColors.bg(context),
       body: Stack(
         children: [
           Positioned.fill(
             child: CustomPaint(
-              painter: DotGridPainter(),
+              painter: DotGridPainter(isDark: isDark),
             ),
           ),
           SafeArea(
@@ -205,10 +206,10 @@ class _StickyBoardScreenState extends ConsumerState<StickyBoardScreen> {
                           Text(
                             'VISUAL BRAINSTORMING ARENA',
                             style: NoveTypography.dmsans(
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w800,
-                                color: NoveColors.warmGray500,
+                                color: NoveColors.mutedText(context),
                                 letterSpacing: 2,
                               ),
                             ),
@@ -230,14 +231,14 @@ class _StickyBoardScreenState extends ConsumerState<StickyBoardScreen> {
                             },
                             icon: const Icon(Icons.settings_backup_restore, color: NoveColors.terracotta),
                             tooltip: 'Restore Floating Note',
-                            style: IconButton.styleFrom(backgroundColor: NoveColors.warmGray200),
+                            style: IconButton.styleFrom(backgroundColor: NoveColors.cardBg(context)),
                           ),
                           const SizedBox(width: 8),
                           IconButton(
                             onPressed: () => _arrangeNotes(visibleNotes),
                             icon: const Icon(Icons.grid_view, color: NoveColors.terracotta),
                             tooltip: 'Arrange Board',
-                            style: IconButton.styleFrom(backgroundColor: NoveColors.warmGray200),
+                            style: IconButton.styleFrom(backgroundColor: NoveColors.cardBg(context)),
                           ),
                         ],
                       ),
@@ -251,9 +252,9 @@ class _StickyBoardScreenState extends ConsumerState<StickyBoardScreen> {
                             'No sticky notes yet.\nAdd one below!',
                             textAlign: TextAlign.center,
                             style: NoveTypography.dmsans(
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
-                                color: NoveColors.warmGray500,
+                                color: NoveColors.mutedText(context),
                               ),
                             ),
                           ),
@@ -312,6 +313,7 @@ class _StickyBoardScreenState extends ConsumerState<StickyBoardScreen> {
       bottomSheet: _InputBar(
         controller: _inputController,
         selectedColor: _selectedColor,
+        isDark: isDark,
         onColorChanged: (c) => setState(() => _selectedColor = c),
         onAdd: _addNote,
       ),
@@ -320,10 +322,14 @@ class _StickyBoardScreenState extends ConsumerState<StickyBoardScreen> {
 }
 
 class DotGridPainter extends CustomPainter {
+  final bool isDark;
+  
+  DotGridPainter({required this.isDark});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = NoveColors.warmGray300.withValues(alpha: 0.3)
+      ..color = isDark ? NoveColors.warmGray800.withValues(alpha: 0.5) : NoveColors.warmGray300.withValues(alpha: 0.3)
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
 
@@ -337,7 +343,7 @@ class DotGridPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant DotGridPainter oldDelegate) => oldDelegate.isDark != isDark;
 }
 
 class _StickyCard extends StatefulWidget {
@@ -392,19 +398,21 @@ class _StickyCardState extends State<_StickyCard> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Move to Trash'),
-          content: const Text('Move this sticky note to the trash bin?'),
+          backgroundColor: NoveColors.cardBg(context),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Move to Trash', style: TextStyle(color: NoveColors.primaryText(context), fontWeight: FontWeight.bold)),
+          content: Text('Move this sticky note to the trash bin?', style: TextStyle(color: NoveColors.secondaryText(context))),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              child: Text('Cancel', style: TextStyle(color: NoveColors.primaryText(context))),
             ),
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
                 widget.onDelete();
               },
-              child: const Text('Trash', style: TextStyle(color: Colors.red)),
+              child: const Text('Trash', style: TextStyle(color: NoveColors.error, fontWeight: FontWeight.bold)),
             ),
           ],
         );
@@ -420,9 +428,9 @@ class _StickyCardState extends State<_StickyCard> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF31312D).withValues(alpha: 0.06),
-            blurRadius: 32,
-            offset: const Offset(0, 12),
+            color: const Color(0xFF31312D).withValues(alpha: 0.15),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -440,7 +448,7 @@ class _StickyCardState extends State<_StickyCard> {
                   child: Container(
                     padding: const EdgeInsets.only(right: 8, bottom: 8),
                     color: Colors.transparent,
-                    child: const Icon(Icons.drag_indicator, size: 20, color: Colors.black26),
+                    child: const Icon(Icons.drag_indicator, size: 20, color: Colors.black38),
                   ),
                 ),
                 Row(
@@ -489,7 +497,7 @@ class _StickyCardState extends State<_StickyCard> {
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1C1C18),
+                      color: Color(0xFF1C1C18), // Always dark text for readable stickies
                       height: 1.2,
                     ),
                   ),
@@ -505,7 +513,7 @@ class _StickyCardState extends State<_StickyCard> {
                   style: const TextStyle(
                     fontSize: 22,
                     height: 1.2,
-                    color: Color(0xCC1C1C18),
+                    color: Color(0xCC1C1C18), // Always dark text for readable stickies
                   ),
                 ),
                 decoration: const InputDecoration(
@@ -530,12 +538,14 @@ class _InputBar extends StatelessWidget {
   final StickyColor selectedColor;
   final ValueChanged<StickyColor> onColorChanged;
   final VoidCallback onAdd;
+  final bool isDark;
 
   const _InputBar({
     required this.controller,
     required this.selectedColor,
     required this.onColorChanged,
     required this.onAdd,
+    required this.isDark,
   });
 
   @override
@@ -550,8 +560,9 @@ class _InputBar extends StatelessWidget {
     return Container(
       padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).viewInsets.bottom + 16),
       decoration: BoxDecoration(
-        color: const Color(0xFFE5E2DC).withValues(alpha: 0.95),
+        color: NoveColors.cardBg(context).withValues(alpha: 0.95),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        border: isDark ? Border(top: BorderSide(color: NoveColors.cardBorder(context), width: 1)) : null,
       ),
       child: Row(
         children: [
@@ -569,7 +580,7 @@ class _InputBar extends StatelessWidget {
                     border: Border.all(
                       color: selectedColor == e.key
                           ? NoveColors.terracotta
-                          : Colors.white,
+                          : (isDark ? Colors.transparent : Colors.white),
                       width: 2,
                     ),
                   ),
@@ -581,13 +592,13 @@ class _InputBar extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: controller,
-              style: const TextStyle(fontFamily: 'DMSans', fontSize: 14, color: Color(0xFF1C1C18)),
-              decoration: const InputDecoration(
+              style: TextStyle(fontFamily: 'DMSans', fontSize: 14, color: NoveColors.primaryText(context)),
+              decoration: InputDecoration(
                 hintText: 'Title (optional)...',
-                hintStyle: TextStyle(color: Color(0x661C1C18)),
+                hintStyle: TextStyle(color: NoveColors.mutedText(context)),
                 border: InputBorder.none,
                 isDense: true,
-                contentPadding: EdgeInsets.symmetric(vertical: 8),
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
               ),
               onSubmitted: (_) => onAdd(),
             ),
